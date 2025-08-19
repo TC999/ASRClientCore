@@ -1,4 +1,4 @@
-﻿using static ASRClientCore.Models.Enums.AsrResponseStatus;
+﻿using ASRClientCore.Models.Enums;
 
 namespace ASRClientCore.Models.Exceptions
 {

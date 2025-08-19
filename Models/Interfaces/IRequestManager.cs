@@ -1,4 +1,4 @@
-﻿using static ASRClientCore.Models.Enums.AsrResponseStatus;
+﻿using ASRClientCore.Models.Enums;
 
 namespace ASRClientCore.Models.Interfaces
 {
@@ -7,7 +7,10 @@ namespace ASRClientCore.Models.Interfaces
         public event Action<string>? Log;
         public IAsrProtocolHandler Handler { get; }
         public uint Timeout { get; set; }
-        public (ResponseStatus Response, string Info) SendGetInformationRequest();
-        public ResponseStatus SendReadPartitionRequest(string partName,out ulong size);
+        public ResponseStatus SendGetInformationRequest(out string? deviceInfo);
+        public ResponseStatus SendReadPartitionRequest(string partName, out ulong size);
+       /* public ResponseStatus SendWritePartitionRequest(string partName);
+        public ResponseStatus SendErasePartitionRequest(string partName);
+        public ResponseStatus SendRebootDeviceToCustomModeRequest(BootMode bootMode);*/
     }
 }
