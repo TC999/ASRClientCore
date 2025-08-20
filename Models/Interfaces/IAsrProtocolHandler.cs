@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ASRClientCore.Models.Interfaces
 {
-    public interface IAsrProtocolHandler
+    public interface IAsrProtocolHandler : IDisposable
     {
         uint Timeout { get; set; }
         uint LastErrorCode { get; }

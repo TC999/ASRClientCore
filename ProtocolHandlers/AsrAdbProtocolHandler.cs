@@ -29,5 +29,9 @@ namespace ASRClientCore.ProtocolHandlers
             var adbDevice = AsrNativeAdbDevice.FindAndOpen(timeout);
             return new AsrAdbProtocolHandler(adbDevice);
         }
+        public void Dispose()
+        {
+            device.Dispose();
+        }
     }
 }

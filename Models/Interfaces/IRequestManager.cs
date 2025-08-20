@@ -8,9 +8,14 @@ namespace ASRClientCore.Models.Interfaces
         public IAsrProtocolHandler Handler { get; }
         public uint Timeout { get; set; }
         public ResponseStatus SendGetInformationRequest(out string? deviceInfo);
+        public ResponseStatus SendGetDeviceInfoRequest(out string? deviceInfo);
         public ResponseStatus SendReadPartitionRequest(string partName, out ulong size);
-       /* public ResponseStatus SendWritePartitionRequest(string partName);
         public ResponseStatus SendErasePartitionRequest(string partName);
-        public ResponseStatus SendRebootDeviceToCustomModeRequest(BootMode bootMode);*/
+        public ResponseStatus SendRebootDeviceRequest(BootMode bootMode);
+        public ResponseStatus SendPowerdownDeviceRequest();
+
+        /* public ResponseStatus SendWritePartitionRequest(string partName);
+         public ResponseStatus SendErasePartitionRequest(string partName);
+         public ResponseStatus SendRebootDeviceToCustomModeRequest(BootMode bootMode);*/
     }
 }

@@ -17,12 +17,16 @@ namespace ASRClientCore.Utils
             {
                 throw new ArgumentException("Response must be at least 16 bytes long.");
             }
-            switch (BinaryPrimitives.ReadUInt32LittleEndian(responseRawPacket.AsSpan(4)))
+            return BinaryPrimitives.ReadUInt32LittleEndian(responseRawPacket.AsSpan(4)) switch
             {
-                default: return InvalidOrUnknown;
-                case 0x4C494146: return Fail;
-                case 0x59454B4F: return Okey;
-            }
+                0x4C494146 => Fail,
+                0x59454B4F => Okey,
+                _ => InvalidOrUnknown,
+            };
         }
+        /*public static bool CheckWritePartitionResponseStatus(byte[] responseRawPacket)
+        {
+
+        }*/
     }
 }

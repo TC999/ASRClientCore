@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ASRClientCore.Models.Enums
 {
-    public enum BootMode
+    public enum BootMode : uint
     {
         Normal = 2,
     }
