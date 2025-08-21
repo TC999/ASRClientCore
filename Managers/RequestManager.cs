@@ -70,10 +70,12 @@ namespace ASRClientCore.DeviceManager
 
             Encoding.ASCII.GetBytes(partName, buf);
             if (0 == handler.Write(buf, 0, 16)) return WriteError;
+
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
             if ((receivedPacket = FromBytes(buf)).Status != Okey)
             {
                 handler.Read(buf, 0, 32);
+                Console.WriteLine(Encoding.ASCII.GetString(buf.AsSpan(0, 32)));
                 return PartitionNotFound;
             }
 
@@ -99,7 +101,7 @@ namespace ASRClientCore.DeviceManager
             Array.Clear(buf, 0, 32);
             return receivedPacket.Status;
         }
-        public ResponseStatus SendPullMemoryRequest(uint address, uint len, out ulong size)
+        public ResponseStatus SendPullMemoryRequest(ulong address, ulong len, out ulong size)
         {
             size = 0;
             AsrPacketToSend packet = new AsrPacketToSend(CmdReadMemory);

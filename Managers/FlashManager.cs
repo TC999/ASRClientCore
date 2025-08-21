@@ -1,9 +1,12 @@
-﻿using ASRClientCore.Models.Interfaces;
-using static ASRClientCore.Models.Enums.ResponseStatus;
-using System;
-using ASRClientCore.Models.Exceptions;
+﻿using ASRClientCore.Models;
 using ASRClientCore.Models.Enums;
+using ASRClientCore.Models.Exceptions;
+using ASRClientCore.Models.Interfaces;
 using ASRClientCore.Models.Packet;
+using SPRDClientCore.Utils;
+using System;
+using System.Net;
+using static ASRClientCore.Models.Enums.ResponseStatus;
 
 namespace ASRClientCore.DeviceManager
 {
@@ -98,7 +101,19 @@ namespace ASRClientCore.DeviceManager
                 handler.Timeout -= 20000;
             }
         }
-        public ulong ReadMemory(uint address, uint len, Stream outputStream) 
+        public List<Partition> GetPartitionList()
+        {
+            ResponseStatus response;
+            lock(_lock)
+            {
+                byte[] buf = new byte[0x10000];
+                if (Okey != (response = manager.SendReadPartitionRequest("FULLDISK", out var size))) throw new BadResponseException(response);
+                handler.Read(buf, 0, buf.Length);
+                using (MemoryStream ms = new MemoryStream(buf))
+                   return EfiTableUtils.GetPartitions(ms);
+            }
+        }
+        public ulong ReadMemory(ulong address, ulong len, Stream outputStream) 
         {
             ResponseStatus response;
             if (outputStream == null || !outputStream.CanWrite)
@@ -113,7 +128,7 @@ namespace ASRClientCore.DeviceManager
                     Log?.Invoke("size from device is 0, return without err");
                     return 0;
                 }
-                Log?.Invoke($"reading memory from address {address:X8} to {address + len:X8}, size : {size / 1024 / 1024}MB");
+                Log?.Invoke($"reading memory from address {address:x} to {address + len:x}, size : {size / 1024 / 1024}MB");
                 byte[] buffer = new byte[MaxReadSize];
                 for (ulong i = 0; i < size;)
                 {
@@ -135,12 +150,12 @@ namespace ASRClientCore.DeviceManager
                 Log?.Invoke($"rebooting device to {bootMode} mode");
             }
         }
-        public void PowerdownDevice()
+        public void PowerDownDevice()
         {
             ResponseStatus response;
             lock (_lock)
             {
-                if (Okey != (response = manager.SendPowerDownDeviceRequest())) throw new BadResponseException(response);
+                if (Okey != (response = manager.SendRebootDeviceRequest(BootMode.PowerDown))) throw new BadResponseException(response);
                 Log?.Invoke("powering down device");
             }
         }

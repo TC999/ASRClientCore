@@ -12,7 +12,7 @@ namespace ASRClientCore.Models.Interfaces
         public ResponseStatus SendReadPartitionRequest(string partName, out ulong size);
         public ResponseStatus SendWritePartitionRequest(string partName, ulong size);
         public ResponseStatus SendErasePartitionRequest(string partName);
-        public ResponseStatus SendPullMemoryRequest(uint address, uint len, out ulong size);
+        public ResponseStatus SendPullMemoryRequest(ulong address, ulong len, out ulong size);
         public ResponseStatus SendRebootDeviceRequest(BootMode bootMode);
         public ResponseStatus SendPowerDownDeviceRequest();
 

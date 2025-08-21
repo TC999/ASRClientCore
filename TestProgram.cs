@@ -8,6 +8,8 @@ using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
+using SPRDClientCore.Utils;
+using ASRClientCore.Models;
 namespace ASRClientCore
 {
     class TestProgram
@@ -164,7 +166,8 @@ namespace ASRClientCore
 --wait [秒数]：设置等待设备连接的时间(默认30秒)
 
 运行时指令：
-写入分区（强制写入在文件路径后加参数force）：w/write_part [分区名] [文件路径] (尚未支持，敬请期待)
+获取分区表：pl/partition_list <保存路径>（获取后设备永远卡死，必须手动重新重启）
+写入分区：w/write_part [分区名] [文件路径] (尚未支持，敬请期待)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
 读取内存：p/pull_mem/read_mem [读取大小] [内存地址] <保存路径> 
@@ -178,6 +181,7 @@ namespace ASRClientCore
 设置最大超时限制: timeout [毫秒时间]";
             private static readonly HashSet<string> CommandKeys = new(StringComparer.OrdinalIgnoreCase)
             {
+                "pl","partition_list",
                 "r","read_part",
                 "w","write_part",
                 "e","erase_part",
@@ -254,6 +258,16 @@ namespace ASRClientCore
                         switch (args[0])
                         {
                             default: Log(commandHelp); break;
+                            case "pl" or "partition_list":
+                                string path = args.Count > 1 ? args[1] : "partition.xml";
+                                List<Partition> partitions = manager.GetPartitionList();
+                                using (FileStream fs = File.Create(path))
+                                    PartitionToXml.SavePartitionsToXml(partitions, fs);
+                                foreach (var part in partitions)
+                                    Console.WriteLine(part.ToString());
+                                Log("please reboot your device by pressing power button for 10 more seconds");
+                                status.HasExited = true;
+                                break;
                             case "r" or "read_part":
                                 if (args.Count < 2)
                                 {
@@ -320,8 +334,8 @@ namespace ASRClientCore
                             case "p_loop":
                                 void add(ref uint i)
                                 {
-                                    if (i < 0x20000) i += 0x2000; 
-                                    else if (i < 0x200000) i += 0x20000; 
+                                    if (i < 0x20000) i += 0x2000;
+                                    else if (i < 0x200000) i += 0x20000;
                                     else if (i < 0x2000000) i += 0x200000;
                                     else i += 0x2000000;
                                 }
@@ -338,7 +352,7 @@ namespace ASRClientCore
                                 break;
                             case "off" or "poweroff":
                                 status.HasExited = true;
-                                manager.PowerdownDevice();
+                                manager.PowerDownDevice();
                                 return true;
                             case "rst" or "reset":
                                 status.HasExited = true;

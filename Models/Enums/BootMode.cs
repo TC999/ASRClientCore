@@ -8,6 +8,7 @@ namespace ASRClientCore.Models.Enums
 {
     public enum BootMode : uint
     {
-        Normal = 2,
+        Normal,
+        PowerDown
     }
 }

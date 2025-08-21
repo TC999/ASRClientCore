@@ -8,14 +8,12 @@ namespace ASRClientCore.Models.Packet
 {
     public struct MemoryPullPacket
     {
-        public uint Address { get; set; }
-        public uint Length { get; set; }
-        public ulong Reserved { get; set; }
-        public MemoryPullPacket(uint address, uint length, ulong reserved = 0)
+        public ulong Address { get; set; }
+        public ulong Length { get; set; }
+        public MemoryPullPacket(ulong address, ulong length)
         {
             Address = address;
             Length = length;
-            Reserved = reserved;
         }
         public byte[] ToBytes()
         {
@@ -30,8 +28,7 @@ namespace ASRClientCore.Models.Packet
                 throw new ArgumentException("Destination span must be at least 16 bytes long.");
             }
             BitConverter.TryWriteBytes(destination.Slice(0), Address);
-            BitConverter.TryWriteBytes(destination.Slice(4), Length);
-            BitConverter.TryWriteBytes(destination.Slice(8), Reserved);
+            BitConverter.TryWriteBytes(destination.Slice(8), Length);
         }
     }
 }
