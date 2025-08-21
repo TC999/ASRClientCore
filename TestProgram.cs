@@ -1,10 +1,12 @@
 ﻿using ASRClientCore.DeviceManager;
 using ASRClientCore.Models.Enums;
+using ASRClientCore.Models.Exceptions;
 using ASRClientCore.Models.Interfaces;
 using ASRClientCore.ProtocolHandlers;
 using ASRClientCore.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Text;
 namespace ASRClientCore
 {
@@ -165,10 +167,11 @@ namespace ASRClientCore
 写入分区（强制写入在文件路径后加参数force）：w/write_part [分区名] [文件路径] (尚未支持，敬请期待)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
-读取内存：p/pull_mem <保存路径> [读取大小] [偏移地址] (尚未支持，敬请期待)
+读取内存：p/pull_mem/read_mem [读取大小] [内存地址] <保存路径> 
+查找可读取的内存地址：p_loop
 获取设备信息：info
 关机: off/poweroff
-开机: rst/reset
+开机(至XX模式): rst/reset <模式>
 
 参数设置指令: 
 设置块大小：blk_size/bs [大小]
@@ -178,12 +181,14 @@ namespace ASRClientCore
                 "r","read_part",
                 "w","write_part",
                 "e","erase_part",
-                "p","pull_mem",
+                "p","pull_mem","read_mem",
+                "p_loop",
                 "info",
                 "off","poweroff",
                 "rst","reset",
                 "blk_size","bs",
                 "timeout",
+
             };
 
 
@@ -257,9 +262,17 @@ namespace ASRClientCore
                                 }
                                 string partName = args[1];
                                 string? outputPath = args.Count > 2 ? args[2] : null;
-                                using (FileStream fs = new FileStream(outputPath ?? $"{partName}.img", FileMode.Create, FileAccess.Write))
+                                try
                                 {
-                                    manager.ReadPartition(partName, fs);
+                                    using (FileStream fs = new FileStream(outputPath ?? $"{partName}.img", FileMode.Create, FileAccess.Write))
+                                    {
+                                        manager.ReadPartition(partName, fs);
+                                    }
+                                }
+                                catch (BadResponseException ex)
+                                {
+                                    if (ex.Response != ResponseStatus.PartitionNotFound) throw;
+                                    Log($"{partName} not exist");
                                 }
                                 break;
                             case "w" or "write_part":
@@ -285,7 +298,40 @@ namespace ASRClientCore
                                 }
                                 manager.ErasePartition(args[1]);
                                 break;
-                            case "p" or "pull_mem":
+                            case "p" or "pull_mem" or "read_mem":
+                                if (args.Count < 3)
+                                {
+                                    Log("p [length] [addr] <path_to_save>");
+                                    break;
+                                }
+                                uint address = (uint)StrToSize.StringToSize(args[1]);
+                                uint length = (uint)StrToSize.StringToSize(args[2]);
+                                string? savePath = args.Count > 3 ? args[3] : $"memdump_{address:x}.bin";
+                                if (length == 0)
+                                {
+                                    Log("读取长度不能为0");
+                                    break;
+                                }
+                                using (FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write))
+                                {
+                                    manager.ReadMemory(address, length, fs);
+                                }
+                                break;
+                            case "p_loop":
+                                void add(ref uint i)
+                                {
+                                    if (i < 0x20000) i += 0x2000; 
+                                    else if (i < 0x200000) i += 0x20000; 
+                                    else if (i < 0x2000000) i += 0x200000;
+                                    else i += 0x2000000;
+                                }
+                                ulong read = 0;
+                                for (uint i = 0x200; read == 0 && i < 0xfe000000; add(ref i))
+                                {
+                                    Log($"tried 0x{i:x}");
+                                    using (MemoryStream stream = new())
+                                        manager.ReadMemory(i, 8, stream);
+                                }
                                 break;
                             case "info":
                                 Console.WriteLine(manager.DeviceInformation);
@@ -296,7 +342,10 @@ namespace ASRClientCore
                                 return true;
                             case "rst" or "reset":
                                 status.HasExited = true;
-                                manager.RebootDeviceToCustomMode(BootMode.Normal);
+                                BootMode mode = BootMode.Normal;
+                                if (args.Count >= 2)
+                                    mode = (BootMode)StrToSize.StringToSize(args[1]);
+                                manager.RebootDeviceToCustomMode(mode);
                                 return true;
                             case "blk_size" or "bs":
                                 if (args.Count < 2)

@@ -13,7 +13,7 @@
         CmdWritePartitionStart = 0x444C5744, // "DWLD"
         CmdReadPartition = 0x444C5055, // "UPLD"
         CmdErasePartition = 0x54505245, // "ERPT"
-        CmdReadFlash = 0x4C4C5550, // "PULL"
+        CmdReadMemory = 0x4C4C5550, // "PULL"
         CmdRebootDevice = 0x54424552, // "REBT"
         CmdPowerdownDevice = 0x44574F50, // "POWD"
         RepWritePartitionEnd = 0x444C5744, // "DWLD"

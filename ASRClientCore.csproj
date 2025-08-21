@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
+    <PublishAot>False</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <UseWindowsForms>False</UseWindowsForms>
     <TargetFramework>net8.0-windows7.0</TargetFramework>

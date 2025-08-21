@@ -21,8 +21,11 @@ namespace ASRClientCore.DeviceManager
             {
                 if (field is null)
                 {
-                    manager.SendGetDeviceInfoRequest(out var deviceInfo);
-                    field = deviceInfo ?? "Can't get device info";
+                    lock (_lock)
+                    {
+                        manager.SendGetInformationRequest(out var deviceInfo);
+                        field = deviceInfo ?? "Can't get device info";
+                    }
                 }
                 return field;
             }
@@ -95,6 +98,34 @@ namespace ASRClientCore.DeviceManager
                 handler.Timeout -= 20000;
             }
         }
+        public ulong ReadMemory(uint address, uint len, Stream outputStream) 
+        {
+            ResponseStatus response;
+            if (outputStream == null || !outputStream.CanWrite)
+            {
+                throw new ArgumentException("output stream must be writable");
+            }
+            lock (_lock)
+            {
+                if (Okey != (response = manager.SendPullMemoryRequest(address, len, out var size))) throw new BadResponseException(response);
+                if (size == 0)
+                {
+                    Log?.Invoke("size from device is 0, return without err");
+                    return 0;
+                }
+                Log?.Invoke($"reading memory from address {address:X8} to {address + len:X8}, size : {size / 1024 / 1024}MB");
+                byte[] buffer = new byte[MaxReadSize];
+                for (ulong i = 0; i < size;)
+                {
+                    uint readSize = (uint)Math.Min(size - i, PerBlockSize);
+                    if (0 == handler.Read(buffer, 0, (int)readSize)) throw new BadResponseException(ReadError, handler.LastErrorCode);
+                    outputStream.Write(buffer, 0, (int)readSize);
+                    i += readSize;
+                    UpdatePercentage?.Invoke((int)((double)i / size * 100));
+                }
+                return size;
+            }
+        }
         public void RebootDeviceToCustomMode(BootMode bootMode)
         {
             ResponseStatus response;
@@ -109,7 +140,7 @@ namespace ASRClientCore.DeviceManager
             ResponseStatus response;
             lock (_lock)
             {
-                if (Okey != (response = manager.SendPowerdownDeviceRequest())) throw new BadResponseException(response);
+                if (Okey != (response = manager.SendPowerDownDeviceRequest())) throw new BadResponseException(response);
                 Log?.Invoke("powering down device");
             }
         }

@@ -73,15 +73,14 @@ namespace ASRClientCore.DeviceManager
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
             if ((receivedPacket = FromBytes(buf)).Status != Okey)
             {
-                Log?.Invoke($"failed to read {partName} partition, {partName} partition may not exist");
-                return receivedPacket.Status;
+                handler.Read(buf, 0, 32);
+                return PartitionNotFound;
             }
 
             if (0 == handler.Read(buf, 0, 8)) return ReadError;
             size = BinaryPrimitives.ReadUInt64LittleEndian(buf.AsSpan(0, 8));
 
             Log?.Invoke(Encoding.ASCII.GetString(buf.AsSpan(0, 16)));
-            Array.Clear(buf, 0, 16);
             return receivedPacket.Status;
         }
         public ResponseStatus SendErasePartitionRequest(string partName)
@@ -100,6 +99,37 @@ namespace ASRClientCore.DeviceManager
             Array.Clear(buf, 0, 32);
             return receivedPacket.Status;
         }
+        public ResponseStatus SendPullMemoryRequest(uint address, uint len, out ulong size)
+        {
+            size = 0;
+            AsrPacketToSend packet = new AsrPacketToSend(CmdReadMemory);
+            AsrReceivedPacket receivedPacket;
+            packet.ToBytes(buf);
+
+            if (0 == handler.Write(buf, 0, 16)) return WriteError;
+
+            MemoryPullPacket pullPacket = new MemoryPullPacket(address, len);
+            pullPacket.ToBytes(buf);
+            if (0 == handler.Write(buf, 0, 16)) return WriteError;
+            if (0 == handler.Read(buf, 0, 16)) return ReadError;
+
+            receivedPacket = FromBytes(buf);
+
+            if (receivedPacket.Status != Okey)
+            {
+                Array.Clear(buf, 0, 16);
+                handler.Read(buf, 0, 32);
+                return receivedPacket.Status;
+            }
+
+            if (0 == handler.Read(buf, 0, 8)) return ReadError;
+
+            size = BinaryPrimitives.ReadUInt64LittleEndian(buf.AsSpan(0, 8));
+            if (size == 0) handler.Read(buf, 0, 8);
+            size = BinaryPrimitives.ReadUInt64LittleEndian(buf.AsSpan(0, 8));
+
+            return receivedPacket.Status;
+        }
         public ResponseStatus SendRebootDeviceRequest(BootMode bootMode)
         {
             AsrPacketToSend packet = new AsrPacketToSend(CmdRebootDevice, (uint)bootMode);
@@ -108,10 +138,9 @@ namespace ASRClientCore.DeviceManager
             if (0 == handler.Write(buf, 0, 16)) return WriteError;
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
             receivedPacket = FromBytes(buf);
-            Array.Clear(buf, 0, 16);
             return receivedPacket.Status;
         }
-        public ResponseStatus SendPowerdownDeviceRequest()
+        public ResponseStatus SendPowerDownDeviceRequest()
         {
             AsrPacketToSend packet = new AsrPacketToSend(CmdPowerdownDevice);
             AsrReceivedPacket receivedPacket;
@@ -122,22 +151,23 @@ namespace ASRClientCore.DeviceManager
             Array.Clear(buf, 0, 16);
             return receivedPacket.Status;
         }
-        /*public ResponseStatus SendWritePartitionRequest(string partName)
+        public ResponseStatus SendWritePartitionRequest(string partName, ulong size)
         {
-            ResponseStatus response;
-
-            Encoding.ASCII.GetBytes(WritePartition, buf);
-            BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(12), 32);
+            AsrPacketToSend packet = new AsrPacketToSend(CmdWritePartitionStart,0,32);
+            AsrReceivedPacket receivedPacket;
+            packet.ToBytes(buf);
             if (0 == handler.Write(buf, 0, 16)) return WriteError;
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
-
-            if ((response = GetResponseStatus(buf)) != Okey && BinaryPrimitives.ReadUInt32LittleEndian(buf.AsSpan(8)) != 0x56434552) // "RECV"
-            {
-                Log?.Invoke("invalid response for writepartition request.");
-                return response;
-            }
-
-            Array.Clear(buf, 0, 16);
-        }*/
+            if ((receivedPacket = FromBytes(buf)).Status != Okey) return receivedPacket.Status;
+            Console.WriteLine(receivedPacket.ToString());
+            WritePartitionPacket writePacket = new WritePartitionPacket(partName, size);
+            writePacket.ToBytes(buf);
+            if (0 == handler.Write(buf, 0, 32)) return WriteError;
+            if (0 == handler.Write(buf, 16, 16)) return WriteError;
+            if (0 == handler.Read(buf, 0, 16)) return ReadError;
+            receivedPacket = FromBytes(buf);
+            Console.WriteLine(receivedPacket.ToString());
+            return receivedPacket.Status;
+        }
     }
 }
