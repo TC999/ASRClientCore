@@ -8,10 +8,9 @@ namespace ASRClientCore.Models.Packet
 {
     public struct WritePartitionPacket
     {
-        uint PartitionId { get; set; } = uint.MaxValue;
-        uint Offset { get; set; } = uint.MaxValue;
-        ulong TotalWriteSize { get; set; }
-        string PartitionName { get; set; }
+        public ulong Address { get; set; }
+        public ulong TotalWriteSize { get; set; }
+        public string PartitionName { get; set; }
         public WritePartitionPacket(string partName, ulong size) 
         {
             TotalWriteSize = size;
@@ -20,8 +19,7 @@ namespace ASRClientCore.Models.Packet
         public void ToBytes(Span<byte> bytes)
         {
             if (bytes.Length < 32) throw new ArgumentException();
-            BitConverter.TryWriteBytes(bytes, PartitionId);
-            BitConverter.TryWriteBytes(bytes.Slice(4), Offset);
+            BitConverter.TryWriteBytes(bytes, Address);
             BitConverter.TryWriteBytes(bytes.Slice(8), TotalWriteSize);
             Encoding.ASCII.GetBytes(PartitionName, bytes.Slice(16));
         }

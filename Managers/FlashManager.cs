@@ -6,6 +6,7 @@ using ASRClientCore.Models.Packet;
 using SPRDClientCore.Utils;
 using System;
 using System.Net;
+using System.Text;
 using static ASRClientCore.Models.Enums.ResponseStatus;
 
 namespace ASRClientCore.DeviceManager
@@ -17,7 +18,7 @@ namespace ASRClientCore.DeviceManager
         private readonly object _lock = new object();
         private readonly Task keepDeviceAliveTask;
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
-        private const uint MaxReadSize = 0x1000000;
+        private const uint MaxSize = 0x1e00000;
         public string DeviceInformation
         {
             get
@@ -34,7 +35,7 @@ namespace ASRClientCore.DeviceManager
             }
         }
         public uint Timeout { get => handler.Timeout; set => handler.Timeout = value; }
-        public uint PerBlockSize { get; set { field = value < MaxReadSize ? value : MaxReadSize; } } = MaxReadSize;
+        public uint PerBlockSize { get; set { field = value < MaxSize ? value : MaxSize; } } = MaxSize;
         public int KeepAliveInterval { get; set; } = 5000;
         public event Action<string>? Log;
         public event Action<int>? UpdatePercentage;
@@ -65,9 +66,9 @@ namespace ASRClientCore.DeviceManager
             }
             lock (_lock)
             {
-                if (Okey != (response = manager.SendReadPartitionRequest(partName, out var size)) || size == 0) throw new BadResponseException(response);
+                if (Okey != (response = manager.SendReadPartitionStartRequest(partName, out var size)) || size == 0) throw new BadResponseException(response);
                 Log?.Invoke($"target partition : {partName}, size : {size / 1024 / 1024}MB");
-                byte[] buffer = new byte[MaxReadSize];
+                byte[] buffer = new byte[MaxSize];
                 for (ulong i = 0; i < size;)
                 {
                     uint readSize = (uint)Math.Min(size - i, PerBlockSize);
@@ -75,6 +76,45 @@ namespace ASRClientCore.DeviceManager
                     outputStream.Write(buffer, 0, (int)readSize);
                     i += readSize;
                     UpdatePercentage?.Invoke((int)((double)i / size * 100));
+                }
+            }
+        }
+        public void WritePartition(string partName, Stream inputStream)
+        {
+            ResponseStatus response;
+            ulong size = (ulong)inputStream.Length;
+            
+            lock (_lock)
+            {
+                try
+                {
+                    Timeout += 5000; // Increase timeout for write operation
+                    if (string.IsNullOrWhiteSpace(partName))
+                    {
+                        throw new ArgumentException("partition name cannot be null or empty");
+                    }
+                    if (Okey != (response = manager.SendWritePartitionStartRequest(partName, size))) throw new BadResponseException(response);
+                    byte[] buf = new byte[MaxSize];
+                    for (ulong i = 0; i < size;)
+                    {
+                        uint writeSize = (uint)Math.Min(size - i, Math.Min(PerBlockSize,MaxSize));
+                        inputStream.ReadExactly(buf, 0, (int)writeSize);
+                        if (0 == handler.Write(buf, 0, (int)writeSize)) throw new BadResponseException(WriteError, handler.LastErrorCode);
+                        i += writeSize;
+                        UpdatePercentage?.Invoke((int)((double)i / size * 100));
+                    }
+                    if (0 == handler.Read(buf, 0, 16)) throw new BadResponseException(WriteError, handler.LastErrorCode);
+                    AsrReceivedPacket packet;
+                    if ((packet = AsrReceivedPacket.FromBytes(buf)).Status != Okey)
+                    {
+                        handler.Read(buf, 0, (int)packet.NextOperationSize); 
+                        Log?.Invoke($"failed to write {partName} partition, err: {Encoding.ASCII.GetString(buf.AsSpan(0,32))}");
+                        throw new BadResponseException(packet.Status);
+                    }
+                }
+                finally
+                {
+                    Timeout -= 5000; // Restore timeout after write operation
                 }
             }
         }
@@ -107,7 +147,7 @@ namespace ASRClientCore.DeviceManager
             lock(_lock)
             {
                 byte[] buf = new byte[0x10000];
-                if (Okey != (response = manager.SendReadPartitionRequest("FULLDISK", out var size))) throw new BadResponseException(response);
+                if (Okey != (response = manager.SendReadPartitionStartRequest("FULLDISK", out var size))) throw new BadResponseException(response);
                 handler.Read(buf, 0, buf.Length);
                 using (MemoryStream ms = new MemoryStream(buf))
                    return EfiTableUtils.GetPartitions(ms);
@@ -129,7 +169,7 @@ namespace ASRClientCore.DeviceManager
                     return 0;
                 }
                 Log?.Invoke($"reading memory from address {address:x} to {address + len:x}, size : {size / 1024 / 1024}MB");
-                byte[] buffer = new byte[MaxReadSize];
+                byte[] buffer = new byte[MaxSize];
                 for (ulong i = 0; i < size;)
                 {
                     uint readSize = (uint)Math.Min(size - i, PerBlockSize);

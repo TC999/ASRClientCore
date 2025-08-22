@@ -10,7 +10,7 @@
         CmdWriteOtpKey = 0x50544F57, // "WOTP"
         CmdRepartitionGptPart1 = 0x53544D46, // "FMTS"
         CmdRepartitionGptPart2 = 0x54504746, // "FGPT"，p1 + p2 = "FMTSFGPT"
-        CmdWritePartitionStart = 0x444C5744, // "DWLD"
+        CmdSendDataStart = 0x444C5744, // "DWLD"
         CmdReadPartition = 0x444C5055, // "UPLD"
         CmdErasePartition = 0x54505245, // "ERPT"
         CmdReadMemory = 0x4C4C5550, // "PULL"

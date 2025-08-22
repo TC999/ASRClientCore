@@ -302,7 +302,12 @@ namespace ASRClientCore
                                     Log($"文件 {writeFilePath} 不存在");
                                     break;
                                 }
-                                Console.WriteLine("尚未完成");
+                                try
+                                {
+                                    using (FileStream fs = File.OpenRead(writeFilePath))
+                                        manager.WritePartition(writePartName, fs);
+                                }
+                                catch (BadResponseException) { }
                                 break;
                             case "e" or "erase_part":
                                 if (args.Count < 2)

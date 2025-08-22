@@ -58,7 +58,7 @@ namespace ASRClientCore.DeviceManager
             Array.Clear(buf, 0, buf.Length);
             return receivedPacket.Status;
         }
-        public ResponseStatus SendReadPartitionRequest(string partName, out ulong size)
+        public ResponseStatus SendReadPartitionStartRequest(string partName, out ulong size)
         {
             size = 0;
             AsrPacketToSend packet = new AsrPacketToSend(CmdReadPartition);
@@ -153,22 +153,18 @@ namespace ASRClientCore.DeviceManager
             Array.Clear(buf, 0, 16);
             return receivedPacket.Status;
         }
-        public ResponseStatus SendWritePartitionRequest(string partName, ulong size)
+        public ResponseStatus SendWritePartitionStartRequest(string partName, ulong size)
         {
-            AsrPacketToSend packet = new AsrPacketToSend(CmdWritePartitionStart,0,32);
+            AsrPacketToSend packet = new AsrPacketToSend(CmdSendDataStart, 2, 32);
             AsrReceivedPacket receivedPacket;
             packet.ToBytes(buf);
             if (0 == handler.Write(buf, 0, 16)) return WriteError;
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
             if ((receivedPacket = FromBytes(buf)).Status != Okey) return receivedPacket.Status;
-            Console.WriteLine(receivedPacket.ToString());
-            WritePartitionPacket writePacket = new WritePartitionPacket(partName, size);
+            Array.Clear(buf, 0, 32);
+            WritePartitionPacket writePacket = new WritePartitionPacket(partName, size) { Address = ulong.MaxValue };
             writePacket.ToBytes(buf);
             if (0 == handler.Write(buf, 0, 32)) return WriteError;
-            if (0 == handler.Write(buf, 16, 16)) return WriteError;
-            if (0 == handler.Read(buf, 0, 16)) return ReadError;
-            receivedPacket = FromBytes(buf);
-            Console.WriteLine(receivedPacket.ToString());
             return receivedPacket.Status;
         }
     }
