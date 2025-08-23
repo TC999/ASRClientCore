@@ -67,7 +67,7 @@ namespace ASRClientCore.DeviceManager
             lock (_lock)
             {
                 if (Okey != (response = manager.SendReadPartitionStartRequest(partName, out var size)) || size == 0) throw new BadResponseException(response);
-                Log?.Invoke($"target partition : {partName}, size : {size / 1024 / 1024}MB");
+                Log?.Invoke($"target partition: {partName}, size: {size / 1024 / 1024}MB");
                 byte[] buffer = new byte[MaxSize];
                 for (ulong i = 0; i < size;)
                 {
@@ -94,6 +94,7 @@ namespace ASRClientCore.DeviceManager
                         throw new ArgumentException("partition name cannot be null or empty");
                     }
                     if (Okey != (response = manager.SendWritePartitionStartRequest(partName, size))) throw new BadResponseException(response);
+                    Log?.Invoke($"target partition: {partName}, size: {size / 1024 / 1024}MB");
                     byte[] buf = new byte[MaxSize];
                     AsrReceivedPacket packet;
                     long nextSize = Math.Min(0x10000000, (long)size);

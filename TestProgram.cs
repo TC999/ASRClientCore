@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Text;
 using SPRDClientCore.Utils;
 using ASRClientCore.Models;
+using System.Net.WebSockets;
 namespace ASRClientCore
 {
     class TestProgram
@@ -19,6 +20,17 @@ namespace ASRClientCore
         {
             Console.Write("[Log] ");
             Console.WriteLine(log);
+        }
+        public static void Log(string log, ConsoleColor color)
+        {
+            var origColor = Console.ForegroundColor;
+            lock (_lock)
+            {
+                Console.ForegroundColor = color;
+                Console.Write("[Log] ");
+                Console.WriteLine(log);
+                Console.ForegroundColor = origColor;
+            }
         }
         static void Main(string[] args)
         {
@@ -46,6 +58,11 @@ namespace ASRClientCore
                 fm.Log += msg => Console.WriteLine(msg);
                 DeviceStatus status = new DeviceStatus();
                 CommandExecutor executor = new CommandExecutor(fm, status);
+                Console.CancelKeyPress += (_, e) =>
+                {
+                    e.Cancel = true;
+                    executor.CancelAction();
+                };
                 try { fm.ErasePartition("fuck_you_asr"); } catch (BadResponseException) { }
                 executor.Execute(args.ToList());
                 while (!status.HasExited)
@@ -130,7 +147,7 @@ namespace ASRClientCore
                 else if (percentage < 0) percentage = 0;
                 int progressWidth = (int)(percentage / 100.0 * BarWidth);
                 var tmp = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Red;
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 lock (_lock)
                 {
                     Console.CursorLeft = 0;
@@ -168,11 +185,13 @@ namespace ASRClientCore
 --wait [秒数]：设置等待设备连接的时间(默认30秒)
 
 运行时指令：
-//获取分区表：pl/partition_list <保存路径>（获取后设备永远卡死，必须手动重新重启）
+获取分区表：pl/partition_list <保存路径>（获取后设备永远卡死，必须手动重新重启）
 重新分区：rp/repartition [分区表路径]
 写入分区：w/write_part [分区名] [文件路径] (须先读取或擦除相应分区)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
+备份全机：backup [分区表文件路径] <保存路径> (保存路径为文件夹路径)
+恢复全机：restore [备份文件夹路径]
 读取内存：p/pull_mem/read_mem [读取大小] [内存地址] <保存路径> 
 查找可读取的内存地址：p_loop
 获取设备信息：info
@@ -200,6 +219,7 @@ namespace ASRClientCore
                 "r","read_part",
                 "w","write_part",
                 "e","erase_part",
+                "backup","restore",
                 "p","pull_mem","read_mem",
                 "p_loop",
                 "info",
@@ -353,6 +373,79 @@ namespace ASRClientCore
                                     Log($"failed to erase {args[1]} partition");
                                 }
                                 break;
+                            case "backup":
+                                if (args.Count < 2)
+                                {
+                                    Log("请指定分区表路径");
+                                    break;
+                                }
+                                string xmlPath = args[1];
+                                if (!File.Exists(xmlPath))
+                                {
+                                    Log("file not exist");
+                                    break;
+                                }
+                                string backupDir = args.Count > 2 ? args[2] : "ASRClientcore_backup";
+                                if (!Directory.Exists(backupDir))
+                                    Directory.CreateDirectory(backupDir);
+                                List<Partition> parts = PartitionToXml.LoadPartitionsXml(File.ReadAllText(xmlPath));
+                                Log("Press Ctrl+C to cancel backup action", ConsoleColor.Cyan);
+                                var token = cts.Token;
+                                foreach (var part in parts)
+                                {
+                                    if (token.IsCancellationRequested) break;
+                                    if (part.Name is "userdata" or "cache")
+                                    {
+                                        Log($"skip {part.Name} partition");
+                                        continue;
+                                    }
+                                    try
+                                    {
+                                        using (FileStream fs = new FileStream(Path.Combine(backupDir, $"{part.Name}.img"), FileMode.Create, FileAccess.Write))
+                                            manager.ReadPartition(part.Name, fs);
+                                    }
+                                    catch (BadResponseException ex)
+                                    {
+                                        if (ex.Response != ResponseStatus.PartitionNotFound) throw;
+                                        Log($"{part.Name} not exist");
+                                    }
+                                }
+                                break;
+                            case "restore":
+                                if (args.Count < 2)
+                                {
+                                    Log("请指定备份文件夹路径");
+                                    break;
+                                }
+                                string restoreDir = args[1];
+                                if (!Directory.Exists(restoreDir))
+                                {
+                                    Log("文件夹不存在");
+                                    break;
+                                }
+                                var imgFiles = Directory.GetFiles(restoreDir, "*.img");
+                                Log("Press Ctrl+C to cancel restore action", ConsoleColor.Cyan);
+                                var ctoken = cts.Token;
+                                foreach (var img in imgFiles)
+                                {
+                                    if (ctoken.IsCancellationRequested) break;
+                                    string partname = Path.GetFileNameWithoutExtension(img);
+                                    if (partname.Contains("modem"))
+                                    {
+                                        Log($"skip {partname} part");
+                                        continue;
+                                    }
+                                    try
+                                    {
+                                        using (FileStream fs = File.OpenRead(img))
+                                            manager.WritePartition(partname, fs);
+                                    }
+                                    catch (BadResponseException)
+                                    {
+                                        Log($"failed to write {partname} partition");
+                                    }
+                                }
+                                break;
                             case "p" or "pull_mem" or "read_mem":
                                 if (args.Count < 3)
                                 {
@@ -423,7 +516,6 @@ namespace ASRClientCore
                 catch (OperationCanceledException) { }
                 return false;
             }
-
             public void CancelAction()
             {
                 cts.Cancel();
