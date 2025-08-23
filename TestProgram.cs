@@ -23,7 +23,8 @@ namespace ASRClientCore
         static void Main(string[] args)
         {
             ConnectionConfig cfg = ConnectionConfig.Parse(ref args);
-            Console.WriteLine($"waiting for device connecting ({cfg.WaitTime / 1000}s) . connect your device directly just after powering down");
+            Console.WriteLine($"Waiting for device connecting ({cfg.WaitTime / 1000}s). Connect your device directly just after powering down");
+            Console.WriteLine("ASRClientCore by YC, QQ:1145145343");
             IAsrProtocolHandler device;
             try
             {
