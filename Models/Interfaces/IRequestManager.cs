@@ -15,6 +15,7 @@ namespace ASRClientCore.Models.Interfaces
         public ResponseStatus SendPullMemoryRequest(ulong address, ulong len, out ulong size);
         public ResponseStatus SendRebootDeviceRequest(BootMode bootMode);
         public ResponseStatus SendPowerDownDeviceRequest();
+        public ResponseStatus SendRepartitionRequest(List<Partition> partitionList);
 
         /* public ResponseStatus SendWritePartitionRequest(string partName);
          public ResponseStatus SendErasePartitionRequest(string partName);

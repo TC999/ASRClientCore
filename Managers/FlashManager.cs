@@ -18,7 +18,7 @@ namespace ASRClientCore.DeviceManager
         private readonly object _lock = new object();
         private readonly Task keepDeviceAliveTask;
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
-        private const uint MaxSize = 0x1e00000;
+        private const uint MaxSize = 0x1000000;
         public string DeviceInformation
         {
             get
@@ -83,7 +83,7 @@ namespace ASRClientCore.DeviceManager
         {
             ResponseStatus response;
             ulong size = (ulong)inputStream.Length;
-            
+
             lock (_lock)
             {
                 try
@@ -95,20 +95,26 @@ namespace ASRClientCore.DeviceManager
                     }
                     if (Okey != (response = manager.SendWritePartitionStartRequest(partName, size))) throw new BadResponseException(response);
                     byte[] buf = new byte[MaxSize];
+                    AsrReceivedPacket packet;
+                    long nextSize = Math.Min(0x10000000, (long)size);
                     for (ulong i = 0; i < size;)
                     {
-                        uint writeSize = (uint)Math.Min(size - i, Math.Min(PerBlockSize,MaxSize));
+                        ulong writeSize = Math.Min(size - i, Math.Min(PerBlockSize, MaxSize));
                         inputStream.ReadExactly(buf, 0, (int)writeSize);
                         if (0 == handler.Write(buf, 0, (int)writeSize)) throw new BadResponseException(WriteError, handler.LastErrorCode);
+                        if ((nextSize -= (long)writeSize) <= 0)
+                        {
+                            if (0 == handler.Read(buf, 0, 16)) throw new BadResponseException(WriteError, handler.LastErrorCode);
+                            packet = AsrReceivedPacket.FromBytes(buf);
+                            nextSize = packet.NextOperationSize;
+                        }
                         i += writeSize;
                         UpdatePercentage?.Invoke((int)((double)i / size * 100));
                     }
-                    if (0 == handler.Read(buf, 0, 16)) throw new BadResponseException(WriteError, handler.LastErrorCode);
-                    AsrReceivedPacket packet;
                     if ((packet = AsrReceivedPacket.FromBytes(buf)).Status != Okey)
                     {
-                        handler.Read(buf, 0, (int)packet.NextOperationSize); 
-                        Log?.Invoke($"failed to write {partName} partition, err: {Encoding.ASCII.GetString(buf.AsSpan(0,32))}");
+                        handler.Read(buf, 0, (int)packet.NextOperationSize);
+                        Log?.Invoke($"failed to write {partName} partition, err: {Encoding.ASCII.GetString(buf.AsSpan(0, 32))}");
                         throw new BadResponseException(packet.Status);
                     }
                 }
@@ -134,7 +140,6 @@ namespace ASRClientCore.DeviceManager
                 AsrReceivedPacket receivedPacket = AsrReceivedPacket.FromBytes(buf);
                 if (receivedPacket.Status != Okey)
                 {
-                    Log?.Invoke($"failed to erase {partName} partition");
                     throw new BadResponseException(receivedPacket.Status);
                 }
                 Log?.Invoke($"successfully erased {partName}");
@@ -144,16 +149,16 @@ namespace ASRClientCore.DeviceManager
         public List<Partition> GetPartitionList()
         {
             ResponseStatus response;
-            lock(_lock)
+            lock (_lock)
             {
                 byte[] buf = new byte[0x10000];
                 if (Okey != (response = manager.SendReadPartitionStartRequest("FULLDISK", out var size))) throw new BadResponseException(response);
                 handler.Read(buf, 0, buf.Length);
                 using (MemoryStream ms = new MemoryStream(buf))
-                   return EfiTableUtils.GetPartitions(ms);
+                    return EfiTableUtils.GetPartitions(ms);
             }
         }
-        public ulong ReadMemory(ulong address, ulong len, Stream outputStream) 
+        public ulong ReadMemory(ulong address, ulong len, Stream outputStream)
         {
             ResponseStatus response;
             if (outputStream == null || !outputStream.CanWrite)
@@ -199,18 +204,31 @@ namespace ASRClientCore.DeviceManager
                 Log?.Invoke("powering down device");
             }
         }
-        /* public void WritePartition(string partName, Stream inputStream)
-         {
-             ResponseStatus response;
-             if (inputStream == null || !inputStream.CanRead)
-             {
-                 throw new ArgumentException("input stream must be readable");
-             }
-             lock (_lock)
-             {
-
-             }
-         }*/
+        public void Repartition(List<Partition> partitionList)
+        {
+            ResponseStatus response;
+            lock (_lock)
+            {
+                try
+                {   Timeout += 20000;
+                    if (partitionList == null || partitionList.Count == 0)
+                    {
+                        throw new ArgumentException("partition list cannot be null or empty");
+                    }
+                    if (Okey != (response = manager.SendRepartitionRequest(partitionList)))
+                    {
+                        byte[] buf = new byte[32];
+                        handler.Read(buf, 0, 32);
+                        Log?.Invoke(Encoding.ASCII.GetString(buf.AsSpan(0, 32)));
+                        throw new BadResponseException(response);
+                    }
+                }
+                finally
+                {
+                    Timeout -= 20000;
+                }
+            }
+        }
         private void KeepDeviceAlive(CancellationToken token)
         {
             while (!token.IsCancellationRequested)

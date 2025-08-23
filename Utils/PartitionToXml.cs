@@ -19,7 +19,7 @@ namespace ASRClientCore.Utils
                     partitions.Select(p =>
                         new XElement("Partition",
                             new XAttribute("id", p.Name),
-                            new XAttribute("size", p.Name == "userdata" ? "0xFFFFFFFF" : Math.Ceiling(p.Size / (double)(1 << p.IndicesToMB)))
+                            new XAttribute("size",  Math.Ceiling(p.Size / (double)(1 << p.IndicesToMB)))
                         )
                     )
                 )

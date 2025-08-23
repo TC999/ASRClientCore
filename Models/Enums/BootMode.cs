@@ -9,6 +9,14 @@ namespace ASRClientCore.Models.Enums
     public enum BootMode : uint
     {
         Normal,
-        PowerDown
+        DisconnectUSB,
+        Normal1,
+        BootLoader,
+        Calibration,
+        Ata,
+        CurrentTest,
+        UDL,
+        PowerDown = 0x14,
+        ColdRebootToNormal
     }
 }

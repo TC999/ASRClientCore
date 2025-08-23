@@ -8,8 +8,8 @@ namespace ASRClientCore.Models
 {
     public struct Partition
     {
-        public string Name;
         public ulong Size;
+        public string Name;
         public int IndicesToMB;
         public static string[] CommonPartitions { get; } = {
             "splloader","prodnv", "miscdata", "recovery", "misc", "trustos", "trustos_bak",
@@ -35,6 +35,12 @@ namespace ASRClientCore.Models
         {
             decimal sizeValue = (decimal)Size / (1UL << IndicesToMB);
             return $"name : {Name} , size : {Math.Round(sizeValue, 0)}";
+        }
+        public void ToBytes(Span<byte> bytes)
+        {
+            if (bytes.Length < 24) throw new ArgumentException();
+            BitConverter.TryWriteBytes(bytes, Size << (20 - IndicesToMB));
+            Encoding.ASCII.GetBytes(Name, bytes.Slice(8));
         }
     }
 }

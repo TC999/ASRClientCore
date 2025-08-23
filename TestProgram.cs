@@ -45,6 +45,7 @@ namespace ASRClientCore
                 fm.Log += msg => Console.WriteLine(msg);
                 DeviceStatus status = new DeviceStatus();
                 CommandExecutor executor = new CommandExecutor(fm, status);
+                try { fm.ErasePartition("fuck_you_asr"); } catch (BadResponseException) { }
                 executor.Execute(args.ToList());
                 while (!status.HasExited)
                 {
@@ -166,8 +167,9 @@ namespace ASRClientCore
 --wait [秒数]：设置等待设备连接的时间(默认30秒)
 
 运行时指令：
-获取分区表：pl/partition_list <保存路径>（获取后设备永远卡死，必须手动重新重启）
-写入分区：w/write_part [分区名] [文件路径] (尚未支持，敬请期待)
+//获取分区表：pl/partition_list <保存路径>（获取后设备永远卡死，必须手动重新重启）
+重新分区：rp/repartition [分区表路径]
+写入分区：w/write_part [分区名] [文件路径] (须先读取或擦除相应分区)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
 读取内存：p/pull_mem/read_mem [读取大小] [内存地址] <保存路径> 
@@ -175,12 +177,24 @@ namespace ASRClientCore
 获取设备信息：info
 关机: off/poweroff
 开机(至XX模式): rst/reset <模式>
+开机模式：
+0:Normal
+1:DisconnectUSB,
+2:Normal1,
+3:BootLoader,
+4:Calibration,
+5:Ata,
+6:CurrentTest,
+7:UDL,
+0x14:PowerOff
+0x15:ColdRebootToNormal
 
 参数设置指令: 
 设置块大小：blk_size/bs [大小]
 设置最大超时限制: timeout [毫秒时间]";
             private static readonly HashSet<string> CommandKeys = new(StringComparer.OrdinalIgnoreCase)
             {
+                "repartition","rp",
                 "pl","partition_list",
                 "r","read_part",
                 "w","write_part",
@@ -268,6 +282,20 @@ namespace ASRClientCore
                                 Log("please reboot your device by pressing power button for 10 more seconds");
                                 status.HasExited = true;
                                 break;
+                            case "repartition" or "rp":
+                                if (args.Count < 2)
+                                {
+                                    Log("请指定分区表路径");
+                                    break;
+                                }
+                                string repartitionPath = args[1];
+                                if (!File.Exists(repartitionPath))
+                                {
+                                    Log($"{repartitionPath} not exist");
+                                    break;
+                                }
+                                manager.Repartition(PartitionToXml.LoadPartitionsXml(File.ReadAllText(repartitionPath)));
+                                break;
                             case "r" or "read_part":
                                 if (args.Count < 2)
                                 {
@@ -315,7 +343,14 @@ namespace ASRClientCore
                                     Log("请指定分区名");
                                     break;
                                 }
-                                manager.ErasePartition(args[1]);
+                                try
+                                {
+                                    manager.ErasePartition(args[1]);
+                                }
+                                catch (BadResponseException)
+                                {
+                                    Log($"failed to erase {args[1]} partition");
+                                }
                                 break;
                             case "p" or "pull_mem" or "read_mem":
                                 if (args.Count < 3)

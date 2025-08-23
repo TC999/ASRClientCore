@@ -16,6 +16,12 @@ namespace ASRClientCore.Models.Packet
             TotalWriteSize = size;
             PartitionName = partName;
         }
+        public byte[] ToBytes()
+        {
+            byte[] result = new byte[32];
+            ToBytes(result);
+            return result;
+        }
         public void ToBytes(Span<byte> bytes)
         {
             if (bytes.Length < 32) throw new ArgumentException();

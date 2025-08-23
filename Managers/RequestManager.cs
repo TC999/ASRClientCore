@@ -7,6 +7,8 @@ using System.Buffers.Binary;
 using System.Text;
 using static ASRClientCore.Models.Enums.AsrCommand;
 using ASRClientCore.Models.Packet;
+using System.Reflection.Emit;
+using ASRClientCore.Models;
 
 namespace ASRClientCore.DeviceManager
 {
@@ -165,6 +167,26 @@ namespace ASRClientCore.DeviceManager
             WritePartitionPacket writePacket = new WritePartitionPacket(partName, size) { Address = ulong.MaxValue };
             writePacket.ToBytes(buf);
             if (0 == handler.Write(buf, 0, 32)) return WriteError;
+            return receivedPacket.Status;
+        }
+        public ResponseStatus SendRepartitionRequest(List<Partition> partitionList)
+        {
+            byte[] partBuffer = new byte[partitionList.Count * 24];
+            AsrPacketToSend packet = new AsrPacketToSend(CmdRepartitionGptPart1, (uint)CmdRepartitionGptPart2, (uint)partBuffer.Length);
+            AsrReceivedPacket receivedPacket;
+            packet.ToBytes(buf);
+            if (0 == handler.Write(buf, 0, 16)) return WriteError;
+            Array.Clear(buf, 0, buf.Length);
+            int offset = 0;
+            foreach (var part in partitionList)
+            {
+                part.ToBytes(partBuffer.AsSpan(offset, 24));
+                offset += 24;
+            }
+            if (0 == handler.Write(partBuffer, 0, partBuffer.Length)) return WriteError;
+            if (0 == handler.Read(buf, 0, 16)) return ReadError;
+            receivedPacket = FromBytes(buf);
+            Array.Clear(buf, 0, buf.Length);
             return receivedPacket.Status;
         }
     }
