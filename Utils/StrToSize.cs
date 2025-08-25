@@ -18,7 +18,7 @@ namespace ASRClientCore.Utils
             if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
             {
                 string hexPart = s.Substring(2);
-                if (uint.TryParse(hexPart, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint hexValue))
+                if (ulong.TryParse(hexPart, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong hexValue))
                     return hexValue;
                 throw new ArgumentException($"无法解析十六进制数：{s}", nameof(s));
             }

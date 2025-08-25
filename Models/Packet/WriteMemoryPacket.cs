@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace ASRClientCore.Models.Packet
 {
-    public struct WritePartitionPacket
+    public struct WriteMemoryPacket
     {
         public ulong Address { get; set; }
         public ulong TotalWriteSize { get; set; }
         public string PartitionName { get; set; }
-        public WritePartitionPacket(string partName, ulong size) 
+        public WriteMemoryPacket(string partName, ulong size) 
         {
             TotalWriteSize = size;
             PartitionName = partName;

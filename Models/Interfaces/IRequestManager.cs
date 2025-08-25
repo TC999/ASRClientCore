@@ -10,7 +10,7 @@ namespace ASRClientCore.Models.Interfaces
         public ResponseStatus SendGetInformationRequest(out string? deviceInfo);
         public ResponseStatus SendGetDeviceInfoRequest(out string? deviceInfo);
         public ResponseStatus SendReadPartitionStartRequest(string partName, out ulong size);
-        public ResponseStatus SendWritePartitionStartRequest(string partName, ulong size);
+        public ResponseStatus SendWriteMemoryStartRequest(ulong addr, ulong size, WriteMemoryMode mode, string partName);
         public ResponseStatus SendErasePartitionRequest(string partName);
         public ResponseStatus SendPullMemoryRequest(ulong address, ulong len, out ulong size);
         public ResponseStatus SendRebootDeviceRequest(BootMode bootMode);

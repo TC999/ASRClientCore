@@ -155,16 +155,16 @@ namespace ASRClientCore.DeviceManager
             Array.Clear(buf, 0, 16);
             return receivedPacket.Status;
         }
-        public ResponseStatus SendWritePartitionStartRequest(string partName, ulong size)
+        public ResponseStatus SendWriteMemoryStartRequest(ulong addr, ulong size, WriteMemoryMode mode, string partName)
         {
-            AsrPacketToSend packet = new AsrPacketToSend(CmdSendDataStart, 2, 32);
+            AsrPacketToSend packet = new AsrPacketToSend(CmdWriteMemoryStart, (uint)mode, 32);
             AsrReceivedPacket receivedPacket;
             packet.ToBytes(buf);
             if (0 == handler.Write(buf, 0, 16)) return WriteError;
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
             if ((receivedPacket = FromBytes(buf)).Status != Okey) return receivedPacket.Status;
             Array.Clear(buf, 0, 32);
-            WritePartitionPacket writePacket = new WritePartitionPacket(partName, size) { Address = ulong.MaxValue };
+            WriteMemoryPacket writePacket = new WriteMemoryPacket(partName, size) { Address = partName == string.Empty ? ulong.MaxValue : addr };
             writePacket.ToBytes(buf);
             if (0 == handler.Write(buf, 0, 32)) return WriteError;
             return receivedPacket.Status;

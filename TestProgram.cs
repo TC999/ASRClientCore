@@ -190,6 +190,7 @@ namespace ASRClientCore
 写入分区：w/write_part [分区名] [文件路径] (须先读取或擦除相应分区)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
+写入内存：send/w_mem [文件路径] [地址] [模式] <分区名称>
 备份全机：backup [分区表文件路径] <保存路径> (保存路径为文件夹路径)
 恢复全机：restore [备份文件夹路径]
 读取内存：p/pull_mem/read_mem [读取大小] [内存地址] <保存路径> 
@@ -197,6 +198,11 @@ namespace ASRClientCore
 获取设备信息：info
 关机: off/poweroff
 开机(至XX模式): rst/reset <模式>
+
+参数设置指令: 
+设置块大小：blk_size/bs [大小]
+设置最大超时限制: timeout [毫秒时间]
+
 开机模式：
 0:Normal
 1:DisconnectUSB,
@@ -209,9 +215,10 @@ namespace ASRClientCore
 0x14:PowerOff
 0x15:ColdRebootToNormal
 
-参数设置指令: 
-设置块大小：blk_size/bs [大小]
-设置最大超时限制: timeout [毫秒时间]";
+写入内存模式：
+0:Write(Send)Only,
+1:WriteAndExecute,
+2:WritePartition";
             private static readonly HashSet<string> CommandKeys = new(StringComparer.OrdinalIgnoreCase)
             {
                 "repartition","rp",
@@ -219,6 +226,7 @@ namespace ASRClientCore
                 "r","read_part",
                 "w","write_part",
                 "e","erase_part",
+                "send","w_mem",
                 "backup","restore",
                 "p","pull_mem","read_mem",
                 "p_loop",
@@ -373,6 +381,25 @@ namespace ASRClientCore
                                     Log($"failed to erase {args[1]} partition");
                                 }
                                 break;
+                            case "send" or "w_mem":
+                                if (args.Count < 4)
+                                {
+                                    Log("send/w_mem [文件路径] [地址] [模式] <分区名称>");
+                                    break;
+                                }
+                                if (!File.Exists(args[1]))
+                                {
+                                    Log($"file not exist");
+                                    break;
+                                }
+                                try
+                                {
+                                    using (FileStream fs = File.OpenRead(args[1]))
+                                        manager.WriteMemory(StrToSize.StringToSize(args[2]),
+                                            (WriteMemoryMode)StrToSize.StringToSize(args[3]),
+                                            fs, args.Count >= 5 ? args[4] : string.Empty);
+                                }catch (BadResponseException) { }
+                                break;
                             case "backup":
                                 if (args.Count < 2)
                                 {
@@ -452,8 +479,8 @@ namespace ASRClientCore
                                     Log("p [length] [addr] <path_to_save>");
                                     break;
                                 }
-                                uint address = (uint)StrToSize.StringToSize(args[1]);
-                                uint length = (uint)StrToSize.StringToSize(args[2]);
+                                ulong address = StrToSize.StringToSize(args[1]);
+                                ulong length = StrToSize.StringToSize(args[2]);
                                 string? savePath = args.Count > 3 ? args[3] : $"memdump_{address:x}.bin";
                                 if (length == 0)
                                 {

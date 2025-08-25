@@ -79,8 +79,9 @@ namespace ASRClientCore.DeviceManager
                 }
             }
         }
-        public void WritePartition(string partName, Stream inputStream)
+        public void WriteMemory(ulong addr, WriteMemoryMode mode, Stream inputStream, string? partName = null)
         {
+            partName ??= string.Empty;
             ResponseStatus response;
             ulong size = (ulong)inputStream.Length;
 
@@ -89,12 +90,8 @@ namespace ASRClientCore.DeviceManager
                 try
                 {
                     Timeout += 5000; // Increase timeout for write operation
-                    if (string.IsNullOrWhiteSpace(partName))
-                    {
-                        throw new ArgumentException("partition name cannot be null or empty");
-                    }
-                    if (Okey != (response = manager.SendWritePartitionStartRequest(partName, size))) throw new BadResponseException(response);
-                    Log?.Invoke($"target partition: {partName}, size: {size / 1024 / 1024}MB");
+                    if (Okey != (response = manager.SendWriteMemoryStartRequest(addr,size,mode,partName))) throw new BadResponseException(response);
+                    Log?.Invoke($"target partition: {(partName == string.Empty ? "memory" : partName)}, addr: 0x{addr:x}, size: {size / 1024 / 1024}MB, mode: {mode}");
                     byte[] buf = new byte[MaxSize];
                     AsrReceivedPacket packet;
                     long nextSize = Math.Min(0x10000000, (long)size);
@@ -124,7 +121,10 @@ namespace ASRClientCore.DeviceManager
                     Timeout -= 5000; // Restore timeout after write operation
                 }
             }
+
         }
+        public void WritePartition(string partName, Stream inputStream)
+            => WriteMemory(ulong.MaxValue, WriteMemoryMode.WritePartition, inputStream, partName);
         public void ErasePartition(string partName)
         {
             ResponseStatus response;
