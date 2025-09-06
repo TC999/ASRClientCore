@@ -190,7 +190,7 @@ namespace ASRClientCore
 写入分区：w/write_part [分区名] [文件路径] (须先读取或擦除相应分区)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
-写入内存：send/w_mem [文件路径] [地址] [模式] <分区名称>
+写入内存：s/w_mem [文件路径] [地址] [模式] <分区名称>
 备份全机：backup [分区表文件路径] <保存路径> (保存路径为文件夹路径)
 恢复全机：restore [备份文件夹路径]
 读取内存：p/pull_mem/read_mem [读取大小] [内存地址] <保存路径> 
@@ -226,7 +226,7 @@ namespace ASRClientCore
                 "r","read_part",
                 "w","write_part",
                 "e","erase_part",
-                "send","w_mem",
+                "s","w_mem",
                 "backup","restore",
                 "p","pull_mem","read_mem",
                 "p_loop",
@@ -381,10 +381,10 @@ namespace ASRClientCore
                                     Log($"failed to erase {args[1]} partition");
                                 }
                                 break;
-                            case "send" or "w_mem":
+                            case "s" or "w_mem":
                                 if (args.Count < 4)
                                 {
-                                    Log("send/w_mem [文件路径] [地址] [模式] <分区名称>");
+                                    Log("s/w_mem [文件路径] [地址] [模式] <分区名称>");
                                     break;
                                 }
                                 if (!File.Exists(args[1]))

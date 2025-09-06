@@ -89,7 +89,7 @@ namespace ASRClientCore.DeviceManager
             {
                 try
                 {
-                    Timeout += 5000; // Increase timeout for write operation
+                    Timeout += 5000; 
                     if (Okey != (response = manager.SendWriteMemoryStartRequest(addr,size,mode,partName))) throw new BadResponseException(response);
                     Log?.Invoke($"target partition: {(partName == string.Empty ? "memory" : partName)}, addr: 0x{addr:x}, size: {size / 1024 / 1024}MB, mode: {mode}");
                     byte[] buf = new byte[MaxSize];

@@ -39,7 +39,8 @@ namespace ASRClientCore.DeviceManager
 
             receivedPacket = FromBytes(buf);
 
-            if (0 == handler.Read(buf, 0, (int)receivedPacket.NextOperationSize)) return ReadError;
+            if ((int)receivedPacket.NextOperationSize > 0)
+                if (0 == handler.Read(buf, 0, (int)receivedPacket.NextOperationSize)) return ReadError;
             deviceInfo = Encoding.ASCII.GetString(buf.AsSpan(0, 16));
 
             Log?.Invoke(deviceInfo);
@@ -56,7 +57,7 @@ namespace ASRClientCore.DeviceManager
             if (0 == handler.Read(buf, 0, 16)) return ReadError;
             receivedPacket = FromBytes(buf);
             if (0 == handler.Read(buf, 0, (int)receivedPacket.NextOperationSize)) return ReadError;
-            deviceInfo = Encoding.ASCII.GetString(buf.AsSpan(0, (int)receivedPacket.NextOperationSize));
+            deviceInfo = Encoding.UTF8.GetString(buf.AsSpan(0, (int)receivedPacket.NextOperationSize));
             Array.Clear(buf, 0, buf.Length);
             return receivedPacket.Status;
         }
