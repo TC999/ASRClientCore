@@ -26,8 +26,8 @@ namespace ASRClientCore
             var origColor = Console.ForegroundColor;
             lock (_lock)
             {
-                Console.ForegroundColor = color;
                 Console.Write("[Log] ");
+                Console.ForegroundColor = color;
                 Console.WriteLine(log);
                 Console.ForegroundColor = origColor;
             }
@@ -67,7 +67,7 @@ namespace ASRClientCore
                 executor.Execute(args.ToList());
                 while (!status.HasExited)
                 {
-                    Console.Write("[ASR] >");
+                    Console.Write("SPL >");
                     string? input = Console.ReadLine();
                     if (string.IsNullOrWhiteSpace(input)) continue;
                     if (input.Equals("exit", StringComparison.OrdinalIgnoreCase) || input.Equals("quit", StringComparison.OrdinalIgnoreCase))
@@ -190,6 +190,7 @@ namespace ASRClientCore
 写入分区：w/write_part [分区名] [文件路径] (须先读取或擦除相应分区)
 回读分区：r/read_part [分区名] <保存路径>
 擦除分区：e/erase_part [分区名]
+设置活动分区槽位: sas/set_active_slot [a或b]
 写入内存：s/w_mem [文件路径] [地址] [模式] <分区名称>
 备份全机：backup [分区表文件路径] <保存路径> (保存路径为文件夹路径)
 恢复全机：restore [备份文件夹路径]
@@ -226,6 +227,7 @@ namespace ASRClientCore
                 "r","read_part",
                 "w","write_part",
                 "e","erase_part",
+                "sas","set_active_slot",
                 "s","w_mem",
                 "backup","restore",
                 "p","pull_mem","read_mem",
@@ -380,6 +382,25 @@ namespace ASRClientCore
                                 {
                                     Log($"failed to erase {args[1]} partition");
                                 }
+                                break;
+                            case "sas" or "set_active_slot":
+                                if (args.Count < 2) 
+                                {
+                                    Log("请指定槽位");
+                                    break;
+                                }
+                                if (args[1] is not ("a" or "b"))
+                                {
+                                    Log("槽位只能是a或b");
+                                    break;
+                                }
+                                manager.SetActiveSlot(args[1] switch 
+                                {
+                                    "a" => SlotToSetActive.SlotA,
+                                    "b" => SlotToSetActive.SlotB,
+                                    _ => throw new InvalidEnumArgumentException()
+                                });
+                                Log($"set active slot to {args[1]} successfully", ConsoleColor.Cyan);
                                 break;
                             case "s" or "w_mem":
                                 if (args.Count < 4)
