@@ -1,0 +1,45 @@
+name: Build .NET Project
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          path: ASRClientCore
+
+      - name: 拉取 adbapi
+        run: |
+          git clone https://github.com/TC999/AdbApiWrapper.git
+
+      - name: 设置 .NET 环境
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 恢复依赖
+        run: |
+          cd ASRClientCore
+          dotnet restore
+
+      - name: 编译解决方案
+        run: |
+          cd ASRClientCore
+          dotnet build --configuration Release --no-restore
+
+      #- name: 运行单元测试（如果有）
+      #  run: dotnet test --no-build --verbosity normal
+      #  continue-on-error: true
