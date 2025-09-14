@@ -30,6 +30,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: 安装 Visual Studio C++ 构建工具
+        uses: microsoft/setup-msbuild@v1.3.1
+
+      - name: 安装 Visual Studio Build Tools
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 安装 C++ 相关组件
+        run: |
+          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional" --yes
+
       - name: 恢复依赖
         run: |
           cd ASRClientCore
