@@ -1,14 +1,10 @@
-name: Build .NET Project
+name: CI
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
@@ -22,36 +18,19 @@ jobs:
           path: ASRClientCore
 
       - name: 拉取 adbapi
+        run: git clone https://github.com/TC999/AdbApiWrapper.git
+
+      - name: 安装 Visual Studio Build Tools（含 C++ 工作负载）
         run: |
-          git clone https://github.com/TC999/AdbApiWrapper.git
+          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional" -y
 
-      - name: 设置 .NET 环境
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - name: 查找 MSBuild 路径
+        run: where msbuild
 
-      - name: 安装 Visual Studio C++ 构建工具
-        uses: microsoft/setup-msbuild@v1.3.1
-
-      - name: 安装 Visual Studio Build Tools
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: 安装 C++ 相关组件
+      - name: 使用 MSBuild 编译解决方案
         run: |
-          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional" --yes
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe" ASRClientCore\ASRClientCore.sln /p:Configuration=Release /m
 
-      - name: 恢复依赖
-        run: |
-          cd ASRClientCore
-          dotnet restore
-
-      - name: 编译解决方案
-        run: |
-          cd ASRClientCore
-          dotnet build --configuration Release --no-restore
-
-      #- name: 运行单元测试（如果有）
-      #  run: dotnet test --no-build --verbosity normal
-      #  continue-on-error: true
+      # 如果有单元测试可启用
+      # - name: 运行单元测试
+      #   run: dotnet test ASRClientCore\ASRClientCore.sln --no-build --verbosity normal
