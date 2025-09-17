@@ -27,9 +27,9 @@ jobs:
       - name: 查找 MSBuild 路径
         run: where msbuild
 
-      - name: 使用 MSBuild 编译解决方案
-        run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe" ASRClientCore\ASRClientCore.sln /p:Configuration=Release /m
+      - name: 编译
+        run: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe" ASRClientCore\ASRClientCore.sln /p:Configuration=Release'
+        shell: cmd
 
       # 如果有单元测试可启用
       # - name: 运行单元测试
