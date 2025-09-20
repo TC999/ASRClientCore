@@ -18,7 +18,7 @@ jobs:
         #  path: ASRClientCore
 
       - name: 拉取 adbapi
-        run: git clone https://github.com/TC999/AdbApiWrapper.git
+        run: git clone https://github.com/YC-nw/AdbApiWrapper.git
 
       - name: 添加 msbuild
         uses: microsoft/setup-msbuild@v2
