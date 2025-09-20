@@ -20,16 +20,25 @@ jobs:
       - name: 拉取 adbapi
         run: git clone https://github.com/TC999/AdbApiWrapper.git
 
-      - name: 安装 Visual Studio Build Tools（含 C++ 工作负载）
-        run: |
-          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional" -y
+      - name: 添加 msbuild
+        uses: microsoft/setup-msbuild@v2
+        
+      - name: Run msbuild
+        run: msbuild -p:configuration=release -p:platform=x64 -p:platformToolset=v143
 
-      - name: 查找 MSBuild 路径
-        run: where msbuild
+      #- name: Install Visual Studio Build Tools 2022
+      #  uses: microsoft/setup-msbuild@v1
 
-      - name: 编译
-        run: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe" ASRClientCore\ASRClientCore.sln /p:Configuration=Release'
-        shell: cmd
+      #- name: 安装 Visual Studio Build Tools（含 C++ 工作负载）
+      #  run: |
+      #    choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional" -y
+
+      #- name: 查找 MSBuild 路径
+      #  run: where msbuild
+
+      #- name: 编译
+      #  run: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe" ASRClientCore\ASRClientCore.sln /p:Configuration=Release'
+      #  shell: cmd
 
       # 如果有单元测试可启用
       # - name: 运行单元测试
