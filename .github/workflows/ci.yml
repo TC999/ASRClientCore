@@ -14,18 +14,21 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          path: ASRClientCore
+        #with:
+        #  path: ASRClientCore
 
       - name: 拉取 adbapi
         run: git clone https://github.com/TC999/AdbApiWrapper.git
 
       - name: 添加 msbuild
         uses: microsoft/setup-msbuild@v2
+
+      - name: 恢复 NuGet 包
+        run: dotnet restore
         
       - name: Run msbuild
         run: |
-          cd ASRClientCore
+          #cd ASRClientCore
           msbuild ASRClientCore.sln -p:configuration=release -p:platform=x64 -p:platformToolset=v143
 
       #- name: Install Visual Studio Build Tools 2022
